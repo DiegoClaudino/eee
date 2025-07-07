@@ -32,6 +32,11 @@ $user_data = $stmt->fetch();
 $pedidos = 8;
 $enderecos = 2;
 
+// Produtos em destaque (6 últimos cadastrados)
+$stmt = $pdo->prepare("SELECT * FROM produtos ORDER BY criado_em DESC LIMIT 6");
+$stmt->execute();
+$produtos_destaque = $stmt->fetchAll();
+
 // Logout
 if (isset($_POST['logout'])) {
     session_destroy();
@@ -210,6 +215,103 @@ if (isset($_POST['logout'])) {
             transform: translateY(-50%) scale(1.1);
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
+        /* Produtos em destaque */
+        .produtos-destaque-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 32px;
+            justify-items: center;
+        }
+        .produto-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 6px 26px rgba(102,126,234,0.12), 0 1.5px 6px rgba(102,126,234,0.04);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+            max-width: 330px;
+            transition: box-shadow 0.18s, transform 0.16s;
+            overflow: hidden;
+            border: 1.5px solid #f3f3fa;
+        }
+        .produto-card:hover {
+            box-shadow: 0 14px 38px rgba(102,126,234,0.16), 0 2px 8px rgba(102,126,234,0.08);
+            transform: translateY(-3px) scale(1.017);
+            border-color: #e1e9fe;
+        }
+        .produto-img-wrap {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(90deg, #f6f8fc 80%, #f6f4fd 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1.5px solid #f0f0fa;
+        }
+        .produto-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #fff;
+        }
+        .produto-placeholder {
+            font-size: 68px;
+            color: #b5b5d6;
+        }
+        .produto-info {
+            padding: 20px 18px 15px 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .produto-info h3 {
+            margin: 0 0 6px 0;
+            font-size: 19px;
+            color: #373e68;
+            font-weight: 700;
+            min-height: 44px;
+            text-align: center;
+            line-height: 1.18;
+            letter-spacing: 0.01em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .produto-preco {
+            font-size: 22px;
+            color: #684fc7;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .produto-desc {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 34px;
+            line-height: 1.2;
+        }
+        .produto-btn {
+            width: 100%;
+            padding: 12px 0;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            box-shadow: 0 3px 12px rgba(102,126,234,0.07);
+            cursor: pointer;
+            transition: background 0.17s, box-shadow 0.15s;
+            letter-spacing: 0.01em;
+        }
+        .produto-btn:hover {
+            background: linear-gradient(90deg, #564bb1 0%, #6d479a 100%);
+            box-shadow: 0 8px 26px rgba(102,126,234,0.12);
+        }
         @media (max-width: 700px) {
             .container { padding: 10px 2vw 30px 2vw; }
             .dashboard { gap: 14px; }
@@ -219,6 +321,16 @@ if (isset($_POST['logout'])) {
             .logout-btn, .voltar-btn { margin-left: 0; margin-top: 8px; width: 100%; }
             .user-header-divider { margin-bottom: 18px; margin-top: 12px; }
             .search-container { max-width: 100%; }
+            .produtos-destaque-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 14px;
+            }
+            .produto-card { max-width: 99vw; }
+            .produto-img-wrap { height: 105px; }
+            .produto-info h3 { font-size: 14px; min-height: 28px;}
+            .produto-preco { font-size: 15px;}
+            .produto-desc { font-size: 12px; min-height: 18px;}
+            .produto-btn { font-size: 14px;}
         }
     </style>
 </head>
@@ -273,6 +385,33 @@ if (isset($_POST['logout'])) {
                 <i class="fas fa-search"></i>
             </button>
         </div>
+        <!-- Produtos em Destaque -->
+        <div style="margin-top:48px;">
+            <h2 style="color:#667eea;text-align:center;font-size:28px;margin-bottom:28px;font-weight:700;">Produtos em Destaque</h2>
+            <div class="produtos-destaque-grid">
+                <?php if ($produtos_destaque && count($produtos_destaque) > 0): ?>
+                    <?php foreach ($produtos_destaque as $produto): ?>
+                        <div class="produto-card">
+                            <div class="produto-img-wrap">
+                                <?php if (!empty($produto['imagem'])): ?>
+                                    <img src="<?= htmlspecialchars($produto['imagem']) ?>" alt="<?= htmlspecialchars($produto['nome']) ?>">
+                                <?php else: ?>
+                                    <i class="fas fa-box produto-placeholder"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="produto-info">
+                                <h3><?= htmlspecialchars($produto['nome']) ?></h3>
+                                <div class="produto-preco">R$ <?= number_format($produto['preco'], 2, ',', '.') ?></div>
+                                <div class="produto-desc"><?= mb_strimwidth(strip_tags($produto['descricao']), 0, 60, '...'); ?></div>
+                                <button class="produto-btn">Comprar Agora</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="color:#aaa;text-align:center;width:100%;">Nenhum produto em destaque ainda.</div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
     <script>
         // Search functionality
@@ -287,6 +426,15 @@ if (isset($_POST['logout'])) {
         });
         searchBox.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') { searchBtn.click(); }
+        });
+
+        // Botão "Comprar Agora" (Exemplo: alerta - substitua por ação real)
+        document.querySelectorAll('.produto-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productTitle = btn.closest('.produto-card').querySelector('h3').textContent;
+                alert(`Produto "${productTitle}" adicionado ao carrinho!`);
+                // Aqui você pode integrar com o carrinho real
+            });
         });
     </script>
 </body>
