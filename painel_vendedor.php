@@ -1,11 +1,11 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_tipo'] !== 'vendedor' && $_SESSION['user_tipo'] !== 'ambos')) {
     header('Location: login_cadastro.php');
     exit;
 }
 
-// Conecte ao banco para buscar dados do usuário, pedidos etc.
+// Conexão ao banco
 $host = 'localhost';
 $db   = 'marketplace';
 $user = 'root';
@@ -27,19 +27,21 @@ $user_id = $_SESSION['user_id'];
 $stmt = $pdo->prepare('SELECT nome, email FROM usuarios WHERE id = ?');
 $stmt->execute([$user_id]);
 $user_data = $stmt->fetch();
+if (!$user_data) {
+    session_destroy();
+    header('Location: login_cadastro.php');
+    exit;
+}
 
-// Exemplo: quantidade de pedidos fictício. Você pode trocar isso para buscar do banco real.
-$pedidos = 8;
-$enderecos = 2;
-$lojas = 1; // Para simular que o usuário é vendedor. Coloque 0 se não for.
-// Fim dos exemplos.
-
-// Logout
 if (isset($_POST['logout'])) {
     session_destroy();
     header('Location: login_cadastro.php');
     exit;
 }
+
+$produtosQtd = $pdo->query("SELECT COUNT(*) FROM produtos WHERE id_vendedor = $user_id")->fetchColumn();
+$pedidos = 0; // Coloque consulta real se implementar pedidos
+$avaliacoes = 0; // Coloque consulta real se implementar avaliações
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -47,7 +49,7 @@ if (isset($_POST['logout'])) {
     <meta charset="UTF-8">
     <title>Painel do Vendedor - MarketPlace Brasil</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -116,6 +118,15 @@ if (isset($_POST['logout'])) {
             align-items: center;
             gap: 0;
         }
+        .user-header-divider {
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.13;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            margin-top: -8px;
+        }
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -158,6 +169,51 @@ if (isset($_POST['logout'])) {
             color: #555;
             font-size: 15px;
         }
+        .produtos-lista {
+            margin-top: 40px;
+        }
+        .produtos-lista h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .produtos-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .produtos-table th, .produtos-table td {
+            padding: 10px 8px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+        .produtos-table th {
+            background: #f4f7fe;
+            color: #667eea;
+        }
+        .produtos-table td img {
+            max-width: 55px;
+            max-height: 55px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+        .add-produto-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 8px;
+            padding: 11px 28px;
+            font-size: 17px;
+            font-weight: bold;
+            text-decoration: none;
+            margin-bottom: 22px;
+            margin-top: 10px;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.08);
+            transition: background .18s, box-shadow .16s;
+        }
+        .add-produto-btn:hover {
+            background: linear-gradient(45deg, #564bb1, #6d479a);
+            box-shadow: 0 8px 30px rgba(102,126,234,0.13);
+        }
         @media (max-width: 700px) {
             .container { padding: 10px 2vw 30px 2vw; }
             .dashboard { gap: 14px; }
@@ -165,76 +221,114 @@ if (isset($_POST['logout'])) {
             .user-header { flex-direction: column; align-items: flex-start; }
             .user-actions { margin-top: 12px; }
             .logout-btn, .voltar-btn { margin-left: 0; margin-top: 8px; width: 100%; }
+            .produtos-table th, .produtos-table td { font-size: 11px; padding: 5px 2px;}
         }
-
-        .user-header-divider {
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    opacity: 0.13;
-    border-radius: 2px;
-    margin-bottom: 20px;
-    margin-top: -8px;
-}
     </style>
 </head>
 <body>
     <div class="container">
-<div class="user-header">
-    <div class="user-avatar">
-        <i class="fas fa-user"></i>
-    </div>
-    <div class="user-info">
-        <h2>Olá, <?= htmlspecialchars($user_data['nome']) ?>!</h2>
-        <p><?= htmlspecialchars($user_data['email']) ?></p>
-    </div>
-    <div class="user-actions">
-        <form method="post" style="display:inline;">
-            <button class="logout-btn" type="submit" name="logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
-        </form>
-        <a href="index.php" class="voltar-btn" style="text-decoration:none; display:inline-block;">
-            <i class="fas fa-arrow-left"></i> Voltar para Home
-        </a>
-    </div>
-</div>
-<div class="user-header-divider"></div>
+        <div class="user-header">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-info">
+                <h2>Olá, <?= htmlspecialchars($user_data['nome']) ?>!</h2>
+                <p><?= htmlspecialchars($user_data['email']) ?></p>
+            </div>
+            <div class="user-actions">
+                <form method="post" style="display:inline;">
+                    <button class="logout-btn" type="submit" name="logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+                </form>
+                <a href="index.php" class="voltar-btn" style="text-decoration:none; display:inline-block;">
+                    <i class="fas fa-arrow-left"></i> Voltar para Home
+                </a>
+            </div>
+        </div>
+        <div class="user-header-divider"></div>
         <div class="dashboard">
+            <div class="dash-card" onclick="window.location='cadastrar_produto.php';">
+                <div class="icon"><i class="fas fa-plus"></i></div>
+                <h3>Cadastrar Produto</h3>
+                <div class="desc">Adicione novos produtos para vender no marketplace.</div>
+            </div>
             <div class="dash-card" onclick="window.location='meus_pedidos.php';">
                 <div class="icon"><i class="fas fa-box-open"></i></div>
                 <div class="count"><?= $pedidos ?></div>
-                <h3>Meus Pedidos</h3>
-                <div class="desc">Acompanhe seus pedidos, status e detalhes de compra.</div>
+                <h3>Compra de Clientes</h3>
+                <div class="desc">Veja compras realizadas pelos clientes.</div>
+            </div>
+            <div class="dash-card" onclick="window.location='minhas_avaliacoes.php';">
+                <div class="icon"><i class="fas fa-star"></i></div>
+                <div class="count"><?= $avaliacoes ?></div>
+                <h3>Minhas Avaliações</h3>
+                <div class="desc">Veja como os clientes avaliam seus produtos.</div>
             </div>
             <div class="dash-card" onclick="window.location='meus_dados.php';">
                 <div class="icon"><i class="fas fa-id-card"></i></div>
                 <h3>Meus Dados</h3>
-                <div class="desc">Atualize seu nome, email e senha.</div>
+                <div class="desc">Atualize nome, email, senha, dados bancários, endereço comercial.</div>
             </div>
-            <div class="dash-card" onclick="window.location='meus_enderecos.php';">
-                <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
-                <div class="count"><?= $enderecos ?></div>
-                <h3>Meus Endereços</h3>
-                <div class="desc">Gerencie seus endereços de entrega.</div>
-            </div>
-            <?php if ($lojas > 0): ?>
-            <div class="dash-card" onclick="window.location='minhas_lojas.php';">
-                <div class="icon"><i class="fas fa-store"></i></div>
-                <div class="count"><?= $lojas ?></div>
-                <h3>Minha Loja</h3>
-                <div class="desc">Gerencie sua(s) loja(s), produtos e vendas.</div>
-            </div>
-            <?php else: ?>
-            <div class="dash-card" onclick="window.location='abrir_loja.php';">
-                <div class="icon"><i class="fas fa-store"></i></div>
-                <h3>Abrir Minha Loja</h3>
-                <div class="desc">Seja um vendedor, crie sua loja e comece a vender.</div>
-            </div>
-            <?php endif; ?>
             <div class="dash-card" onclick="window.location='central_ajuda.php';">
                 <div class="icon"><i class="fas fa-headset"></i></div>
                 <h3>Central de Ajuda</h3>
                 <div class="desc">Dúvidas? Acesse nossos canais de atendimento.</div>
             </div>
+        </div>
+
+        <div class="produtos-lista">
+            <table class="produtos-table">
+                <thead>
+                    <tr>
+                        <th>Imagem</th>
+                        <th>Produto</th>
+                        <th>Preço</th>
+                        <th>Estoque</th>
+                        <th>Categoria</th>
+                        <th>Métodos de Pagamento</th>
+                        <th>Rastreamento</th>
+                        <th>Envio</th>
+                        <th>Peso</th>
+                        <th>Dimensões</th>
+                        <th>Garantia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                $stmt = $pdo->prepare("SELECT * FROM produtos WHERE id_vendedor = ?");
+                $stmt->execute([$user_id]);
+                $produtos = $stmt->fetchAll();
+                if (is_array($produtos) && count($produtos) > 0):
+                    foreach ($produtos as $produto):
+                ?>
+                    <tr>
+                        <td>
+                            <?php if (!empty($produto['imagem'])): ?>
+                                <img src="<?= htmlspecialchars($produto['imagem']) ?>" alt="Imagem do produto">
+                            <?php else: ?>
+                                <span style="color:#aaa;">Sem imagem</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= htmlspecialchars($produto['nome']) ?></td>
+                        <td>R$ <?= number_format($produto['preco'], 2, ',', '.') ?></td>
+                        <td><?= (int)$produto['estoque'] ?></td>
+                        <td><?= htmlspecialchars($produto['categoria']) ?></td>
+                        <td><?= htmlspecialchars($produto['metodo_pagamento']) ?></td>
+                        <td><?= htmlspecialchars($produto['rastreamento']) ?></td>
+                        <td><?= htmlspecialchars($produto['envio']) ?></td>
+                        <td><?= number_format($produto['peso'], 2, ',', '.') ?> kg</td>
+                        <td><?= htmlspecialchars($produto['dimensoes']) ?></td>
+                        <td><?= htmlspecialchars($produto['garantia']) ?></td>
+                    </tr>
+                <?php
+                    endforeach;
+                else:
+                ?>
+                    <tr>
+                        <td colspan="11" style="text-align:center;color:#aaa;">Nenhum produto cadastrado ainda.</td>
+                    </tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
