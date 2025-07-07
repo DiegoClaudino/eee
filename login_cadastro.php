@@ -66,7 +66,7 @@ if (isset($_POST['login'])) {
         } elseif ($user['tipo'] === 'vendedor') {
             header('Location: painel_vendedor.php');
         } else {
-            header('Location: painel.php'); // Ambos ou outro tipo
+            header('Location: index.php'); // Ambos ou outro tipo
         }
         exit;
     } else {

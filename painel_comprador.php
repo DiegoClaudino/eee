@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['user_tipo'] !== 'comprador') {
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_tipo'] !== 'comprador' && $_SESSION['user_tipo'] !== 'ambos')) {
     header('Location: login_cadastro.php');
     exit;
 }
@@ -120,8 +120,8 @@ if (isset($_POST['logout'])) {
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             opacity: 0.13;
             border-radius: 2px;
-            margin-bottom: 32px;   /* MAIOR espaçamento para separar do conteúdo */
-            margin-top: 18px;      /* Espaço entre header e linha */
+            margin-bottom: 32px;
+            margin-top: 18px;
         }
         .dashboard {
             display: grid;
@@ -165,6 +165,51 @@ if (isset($_POST['logout'])) {
             color: #555;
             font-size: 15px;
         }
+        /* Busca estilo index */
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 38px auto 0 auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px 50px 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f7f8fa;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .search-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
         @media (max-width: 700px) {
             .container { padding: 10px 2vw 30px 2vw; }
             .dashboard { gap: 14px; }
@@ -173,6 +218,7 @@ if (isset($_POST['logout'])) {
             .user-actions { margin-top: 12px; }
             .logout-btn, .voltar-btn { margin-left: 0; margin-top: 8px; width: 100%; }
             .user-header-divider { margin-bottom: 18px; margin-top: 12px; }
+            .search-container { max-width: 100%; }
         }
     </style>
 </head>
@@ -220,6 +266,28 @@ if (isset($_POST['logout'])) {
                 <div class="desc">Dúvidas? Acesse nossos canais de atendimento.</div>
             </div>
         </div>
+        <!-- Bloco de busca abaixo das 4 caixas -->
+        <div class="search-container">
+            <input type="text" class="search-box" placeholder="Buscar produtos, marcas, lojas...">
+            <button class="search-btn">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
     </div>
+    <script>
+        // Search functionality
+        const searchBtn = document.querySelector('.search-btn');
+        const searchBox = document.querySelector('.search-box');
+        searchBtn.addEventListener('click', function() {
+            const searchTerm = searchBox.value.trim();
+            if (searchTerm) {
+                alert(`Buscando por: ${searchTerm}`);
+                // Aqui você implementaria a busca real (redirecionar, AJAX, etc)
+            }
+        });
+        searchBox.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { searchBtn.click(); }
+        });
+    </script>
 </body>
 </html>
