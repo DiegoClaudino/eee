@@ -1,4 +1,29 @@
-<?php session_start(); ?>
+<?php
+session_start();
+
+// Conexão com banco de dados
+$host = 'localhost';
+$db   = 'marketplace';
+$user = 'root';
+$pass = '';
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+];
+try {
+    $pdo = new PDO($dsn, $user, $pass, $options);
+} catch (\PDOException $e) {
+    die('Erro ao conectar no banco: ' . $e->getMessage());
+}
+
+// Buscar os produtos em destaque (exemplo: 6 últimos cadastrados)
+$stmt = $pdo->prepare("SELECT * FROM produtos ORDER BY criado_em DESC LIMIT 6");
+$stmt->execute();
+$produtos_destaque = $stmt->fetchAll();
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -534,65 +559,31 @@
             </div>
         </div>
     </section>
-    <!-- Featured Products -->
     <section class="featured-products">
         <div class="container">
             <h2 class="section-title">Produtos em Destaque</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-mobile-alt"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Smartphone Galaxy Ultra</h3>
-                        <div class="product-price">R$ 2.499,00</div>
-                        <div class="product-rating"><span class="stars">★★★★★</span><span>(4.8) 1.234 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-laptop"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Notebook Gamer Pro</h3>
-                        <div class="product-price">R$ 3.999,00</div>
-                        <div class="product-rating"><span class="stars">★★★★★</span><span>(4.9) 876 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-headphones"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Fone Bluetooth Premium</h3>
-                        <div class="product-price">R$ 299,00</div>
-                        <div class="product-rating"><span class="stars">★★★★☆</span><span>(4.6) 2.156 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-camera"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Câmera Digital 4K</h3>
-                        <div class="product-price">R$ 1.899,00</div>
-                        <div class="product-rating"><span class="stars">★★★★★</span><span>(4.7) 543 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-gamepad"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Console Gaming Next-Gen</h3>
-                        <div class="product-price">R$ 2.799,00</div>
-                        <div class="product-rating"><span class="stars">★★★★★</span><span>(4.9) 3.421 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
-                <div class="product-card">
-                    <div class="product-image"><i class="fas fa-watch"></i></div>
-                    <div class="product-info">
-                        <h3 class="product-title">Smartwatch Fitness</h3>
-                        <div class="product-price">R$ 599,00</div>
-                        <div class="product-rating"><span class="stars">★★★★☆</span><span>(4.5) 1.876 avaliações</span></div>
-                        <button class="product-btn">Comprar Agora</button>
-                    </div>
-                </div>
+            <div class="products-grid" style="justify-items:center;gap:40px;">
+                <?php if ($produtos_destaque && count($produtos_destaque) > 0): ?>
+                    <?php foreach ($produtos_destaque as $produto): ?>
+                        <div class="product-card" style="display:flex; flex-direction:column; align-items:center; justify-content:space-between; min-height:470px; min-width:310px; max-width:340px; box-shadow:0 6px 24px rgba(102,126,234,0.17); border-radius:22px;">
+                            <div class="product-image" style="width:100%;height:260px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f5f7fa;">
+                                <?php if (!empty($produto['imagem'])): ?>
+                                    <img src="<?= htmlspecialchars($produto['imagem']) ?>" alt="<?= htmlspecialchars($produto['nome']) ?>" style="width:100%;height:100%;object-fit:cover; display:block; margin:auto;">
+                                <?php else: ?>
+                                    <i class="fas fa-box" style="font-size:80px;color:#667eea;margin:auto;"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="product-info" style="width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:22px 16px 18px 16px;">
+                                <h3 class="product-title" style="margin:10px 0 12px 0;font-size:21px;height:56px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"><?= htmlspecialchars($produto['nome']) ?></h3>
+                                <div class="product-price" style="margin-bottom:15px;font-size:26px;">R$ <?= number_format($produto['preco'], 2, ',', '.') ?></div>
+                                <div class="product-rating" style="justify-content:center;margin-bottom:18px;"><span class="stars" style="font-size:18px;">★★★★★</span></div>
+                                <button class="product-btn" style="margin-top:8px;font-size:18px;padding:13px 0;">Comprar Agora</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="color:#aaa;text-align:center;width:100%;">Nenhum produto em destaque ainda.</div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -649,7 +640,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 MarketPlace Brasil. Todos os direitos reservados.</p>
+                <p>&copy; 2025 ProMarket Brasil. Todos os direitos reservados.</p>
             </div>
         </div>
     </footer>

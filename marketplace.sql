@@ -33,3 +33,5 @@ CREATE TABLE IF NOT EXISTS produtos (
 
 -- Outras tabelas podem ser adicionadas conforme o crescimento do projeto,
 -- como pedidos, lojas, avaliações, endereços, etc.
+
+select * from produtos;
